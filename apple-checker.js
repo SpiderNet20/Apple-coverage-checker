@@ -132,4 +132,14 @@
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();
+
+  // مواقع كثيرة تضيف محتوى الصفحة بعد تحميل السكربت: نراقب ظهور الحاوية ونركّب الأداة فيها
+  if (window.MutationObserver) {
+    var queued = false;
+    new MutationObserver(function () {
+      if (queued) return;
+      queued = true;
+      setTimeout(function () { queued = false; init(); }, 50);
+    }).observe(document.documentElement, { childList: true, subtree: true });
+  }
 })();
