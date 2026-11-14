@@ -1,0 +1,106 @@
+<!-- ===== ويدجت فحص ضمان Apple: انسخ كل ما في هذا الملف والصقه في أي صفحة ===== -->
+<!-- أداة مستقلة غير تابعة لشركة Apple. لا ترسل الرقم لأي خادم؛ تنسخه وتفتح موقع Apple الرسمي. -->
+<div class="acw" dir="rtl">
+  <style>
+    .acw{--c-ink:#1d1d1f;--c-muted:#6e6e73;--c-blue:#0071e3;--c-line:#d2d2d7;--c-red:#c9342d;--c-green:#16834b;max-width:560px;margin:24px auto;padding:22px;background:#fff;color:var(--c-ink);border:1px solid #e4e4e7;border-radius:18px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Tahoma,Arial,sans-serif;line-height:1.7;box-sizing:border-box}
+    .acw *{box-sizing:border-box}
+    .acw h3{margin:0 0 6px;font-size:20px}
+    .acw p{margin:0 0 14px;color:var(--c-muted);font-size:14px}
+    .acw label{display:block;font-weight:650;font-size:14px;margin-bottom:8px}
+    .acw input{width:100%;height:50px;border:1px solid var(--c-line);border-radius:12px;padding:0 14px;font:inherit;font-size:16px;direction:ltr;text-align:left;background:#fff;color:var(--c-ink);outline:none}
+    .acw input:focus{border-color:var(--c-blue);box-shadow:0 0 0 4px rgba(0,113,227,.15)}
+    .acw input.acw-bad{border-color:var(--c-red)}
+    .acw .acw-msg{min-height:22px;margin:8px 2px 0;font-size:13px}
+    .acw .acw-err{color:var(--c-red)}
+    .acw .acw-ok{color:var(--c-green)}
+    .acw .acw-btns{display:flex;gap:10px;margin-top:10px;flex-wrap:wrap}
+    .acw button{flex:1 1 auto;min-height:48px;padding:0 18px;border:0;border-radius:12px;font:inherit;font-weight:700;cursor:pointer}
+    .acw .acw-go{background:var(--c-blue);color:#fff;flex:2 1 220px}
+    .acw .acw-go:hover{background:#0077ed}
+    .acw .acw-sec{background:#f0f0f2;color:var(--c-ink)}
+    .acw button:focus-visible{outline:3px solid rgba(0,113,227,.4);outline-offset:2px}
+    .acw small{display:block;margin-top:14px;color:var(--c-muted);font-size:12px}
+  </style>
+
+  <h3>فحص ضمان جهاز Apple</h3>
+  <p>أدخل الرقم التسلسلي أو IMEI، ثم أكمل الفحص من موقع Apple الرسمي.</p>
+
+  <form class="acw-form" novalidate>
+    <label>الرقم التسلسلي أو IMEI
+      <input class="acw-in" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="40" placeholder="مثال: F2LXXXXXXXXX">
+    </label>
+    <div class="acw-msg" role="status" aria-live="polite"></div>
+    <div class="acw-btns">
+      <button class="acw-go" type="submit">متابعة إلى فحص Apple الرسمي ←</button>
+      <button class="acw-sec acw-clear" type="button">مسح</button>
+    </div>
+  </form>
+  <small>أداة مستقلة غير تابعة أو معتمدة من Apple Inc. لا نعرض حالة الضمان، والنتيجة الحقيقية تظهر في موقع Apple.</small>
+
+  <script>
+  (function () {
+    var me = document.currentScript || (function () { var s = document.getElementsByTagName('script'); return s[s.length - 1]; })();
+    var root = me && me.closest('.acw');
+    if (!root || root.dataset.ready) return;
+    root.dataset.ready = '1';
+    var APPLE_URL = 'https://checkcoverage.apple.com/';
+    var form = root.querySelector('.acw-form');
+    var input = root.querySelector('.acw-in');
+    var msg = root.querySelector('.acw-msg');
+
+    function show(text, kind) {
+      msg.textContent = text || '';
+      msg.className = 'acw-msg' + (kind ? ' acw-' + kind : '');
+      input.classList.toggle('acw-bad', kind === 'err');
+    }
+    function extract(raw) {
+      var s = String(raw || '').toUpperCase();
+      var digits = s.replace(/[\s\-\/.]/g, '');
+      if (/^\d{15}$/.test(digits)) return digits;
+      var cleaned = s.replace(/(SERIAL\s*(NUMBER|NO\.?)?|S\/N|IMEI|الرقم\s*التسلسلي)\s*[:：]?/g, ' ');
+      var t = cleaned.match(/[A-Z0-9]{8,24}/g);
+      return t && t.length ? t[0] : s.replace(/[^A-Z0-9]/g, '');
+    }
+    function luhn(n) {
+      var sum = 0, alt = false;
+      for (var i = n.length - 1; i >= 0; i--) {
+        var d = n.charCodeAt(i) - 48;
+        if (alt) { d *= 2; if (d > 9) d -= 9; }
+        sum += d; alt = !alt;
+      }
+      return sum % 10 === 0;
+    }
+    function check(v) {
+      if (/^\d{15}$/.test(v)) return luhn(v) ? null : 'رقم IMEI غير صحيح، راجع الأرقام.';
+      if (/^[A-Z0-9]{8,24}$/.test(v)) return null;
+      return 'أدخل رقماً تسلسلياً (8 إلى 24 حرفاً وأرقاماً) أو IMEI من 15 رقماً.';
+    }
+    function copy(v) {
+      try {
+        if (navigator.clipboard && window.isSecureContext) return navigator.clipboard.writeText(v).then(function () { return true; }, function () { return false; });
+      } catch (e) {}
+      return Promise.resolve(false);
+    }
+
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var v = extract(input.value), bad = check(v);
+      if (bad) { show(bad, 'err'); input.focus(); return; }
+      input.value = v;
+      var copying = copy(v); // داخل نفس الضغطة ليسمح بها المتصفح
+      var w = window.open(APPLE_URL, '_blank', 'noopener,noreferrer');
+      copying.then(function (ok) {
+        show(ok ? 'تم نسخ الرقم. الصقه في خانة الرقم التسلسلي بصفحة Apple.' : 'انسخ الرقم يدوياً ثم الصقه في صفحة Apple.', 'ok');
+      });
+      if (!w) window.location.href = APPLE_URL;
+    });
+    input.addEventListener('input', function () { show(''); });
+    input.addEventListener('paste', function () {
+      setTimeout(function () { var v = extract(input.value); if (v) input.value = v; }, 0);
+    });
+    root.querySelector('.acw-clear').addEventListener('click', function () {
+      input.value = ''; show(''); input.focus();
+    });
+  })();
+  </script>
+</div>
