@@ -1,7 +1,7 @@
 /*!
- * Apple Coverage Checker widget (أداة فحص ضمان Apple)
+ * Apple Coverage Checker widget (أداة فحص ضمان Apple) v1.1
  * أداة مستقلة غير تابعة أو معتمدة من Apple Inc.
- * لا ترسل الرقم لأي خادم: تنسخه وتفتح موقع Apple الرسمي فقط.
+ * لا ترسل الرقم لأي خادم: تحلل الرقم داخل المتصفح، وتفتح موقع Apple الرسمي عند طلبك.
  *
  * الاستخدام في الصفحة:
  *   <div id="apple-checker"></div>
@@ -29,24 +29,36 @@
     '.go{background:var(--blue);color:#fff;flex:2 1 220px}.go:hover{background:#0077ed}',
     '.sec{background:#f0f0f2;color:var(--ink)}',
     'button:focus-visible{outline:3px solid rgba(0,113,227,.4);outline-offset:2px}',
+    '.res{margin-top:16px;border:1px solid #cfe8d8;background:#f2fbf5;border-radius:12px;padding:14px 16px}',
+    '.res:empty{display:none}',
+    '.rhead{font-weight:700;color:var(--green);margin-bottom:8px}',
+    '.rows{margin:8px 0;display:grid;gap:6px}',
+    '.rows div{display:flex;justify-content:space-between;align-items:center;gap:10px;background:#fff;border:1px solid var(--line);border-radius:8px;padding:6px 12px;font-size:14px}',
+    '.rows dt{color:var(--muted)}',
+    '.rows dd{margin:0;font-weight:700;font-family:ui-monospace,Menlo,Consolas,monospace;letter-spacing:1px;direction:ltr}',
+    '.rnote{font-size:13px;margin:8px 0}',
+    '.next{margin:10px 0 0;padding:0 18px 0 0;font-size:13px;color:var(--muted)}',
+    '.next li{margin-bottom:4px}',
+    '.apple{width:100%;margin-top:12px;background:var(--blue);color:#fff}.apple:hover{background:#0077ed}',
     'small{display:block;margin-top:14px;color:var(--muted);font-size:12px}'
   ].join('\n');
 
   var HTML = [
     '<div class="box" dir="rtl">',
-    '  <h3>فحص ضمان جهاز Apple</h3>',
-    '  <p>أدخل الرقم التسلسلي أو IMEI، ثم أكمل الفحص من موقع Apple الرسمي.</p>',
+    '  <h3>فحص رقم جهاز Apple</h3>',
+    '  <p>أدخل الرقم التسلسلي أو IMEI لنحلل الرقم، ثم أكمل فحص الضمان من موقع Apple الرسمي.</p>',
     '  <form novalidate>',
     '    <label>الرقم التسلسلي أو IMEI',
     '      <input type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="40" placeholder="مثال: F2LXXXXXXXXX">',
     '    </label>',
     '    <div class="msg" role="status" aria-live="polite"></div>',
     '    <div class="btns">',
-    '      <button class="go" type="submit">متابعة إلى فحص Apple الرسمي ←</button>',
+    '      <button class="go" type="submit">تحقق من الرقم</button>',
     '      <button class="sec" type="button" data-clear>مسح</button>',
     '    </div>',
     '  </form>',
-    '  <small>أداة مستقلة غير تابعة أو معتمدة من Apple Inc. لا نعرض حالة الضمان، والنتيجة الحقيقية تظهر في موقع Apple.</small>',
+    '  <div class="res" aria-live="polite"></div>',
+    '  <small>أداة مستقلة غير تابعة أو معتمدة من Apple Inc. التحليل أعلاه فحص لصيغة الرقم فقط، وحالة الضمان الرسمية تظهر في موقع Apple.</small>',
     '</div>'
   ].join('\n');
 
@@ -70,9 +82,41 @@
   }
 
   function check(v) {
-    if (/^\d{15}$/.test(v)) return luhn(v) ? null : 'رقم IMEI غير صحيح، راجع الأرقام.';
+    if (/^\d{15}$/.test(v)) return luhn(v) ? null : 'رقم IMEI غير صحيح (فشل اختبار رقم التحقق). راجع الأرقام.';
     if (/^[A-Z0-9]{8,24}$/.test(v)) return null;
     return 'أدخل رقماً تسلسلياً (8 إلى 24 حرفاً وأرقاماً) أو IMEI من 15 رقماً.';
+  }
+
+  function serialHint(len) {
+    if (len === 12) return 'صيغة تقليدية من 12 خانة شائعة في iPhone وiPad وMac.';
+    if (len === 11) return 'صيغة أقدم من 11 خانة لدى بعض الأجهزة.';
+    if (len === 10) return 'صيغة عشوائية من 10 خانات تستخدمها Apple في بعض المنتجات الأحدث.';
+    return 'طول غير معتاد، تأكد أنك نسخت الرقم كاملاً.';
+  }
+
+  // تحليل حقيقي للرقم داخل المتصفح (لا أسماء طرازات مخترعة ولا حالة ضمان)
+  function resultHtml(v) {
+    var next =
+      '<ul class="next">' +
+      '<li>قارن الرقم بالمعروض في الإعدادات ← عام ← حول، وبالمطبوع على العبوة أو الجهاز.</li>' +
+      '<li>افتح صفحة Apple الرسمية لمعرفة الطراز وحالة الضمان والتغطية.</li>' +
+      '<li>عند شراء جهاز مستعمل اطلب من البائع إثبات الشراء.</li>' +
+      '</ul>';
+    var btn = '<button class="apple" type="button" data-apple>افتح فحص Apple الرسمي وانسخ الرقم ←</button>';
+    if (/^\d{15}$/.test(v)) {
+      return '<div class="rhead">رقم IMEI صحيح (اجتاز اختبار رقم التحقق)</div>' +
+        '<dl class="rows">' +
+        '<div><dt>رمز النوع TAC (أول 8 أرقام)</dt><dd>' + v.slice(0, 8) + '</dd></div>' +
+        '<div><dt>الرقم المتسلسل (6 أرقام)</dt><dd>' + v.slice(8, 14) + '</dd></div>' +
+        '<div><dt>رقم التحقق</dt><dd>' + v.slice(14) + '</dd></div>' +
+        '</dl>' +
+        '<p class="rnote">رمز النوع يحدد الشركة المصنّعة وطراز الجهاز، لكن هذه الأداة لا تحوّله إلى اسم طراز. اسم الطراز وحالة الضمان تظهران في صفحة Apple الرسمية.</p>' +
+        next + btn;
+    }
+    return '<div class="rhead">الرقم التسلسلي بصيغة سليمة (' + v.length + ' خانة)</div>' +
+      '<dl class="rows"><div><dt>الرقم</dt><dd>' + v + '</dd></div></dl>' +
+      '<p class="rnote">' + serialHint(v.length) + ' سلامة الصيغة لا تعني أن الرقم مسجّل لدى Apple، فهذا تؤكده صفحة Apple الرسمية فقط.</p>' +
+      next + btn;
   }
 
   function copy(v) {
@@ -88,32 +132,39 @@
     var form = root.querySelector('form');
     var input = root.querySelector('input');
     var msg = root.querySelector('.msg');
+    var res = root.querySelector('.res');
 
     function show(text, kind) {
       msg.textContent = text || '';
       msg.className = 'msg' + (kind ? ' ' + kind : '');
       input.classList.toggle('bad', kind === 'err');
     }
+    function reset() { res.innerHTML = ''; show(''); }
 
     form.addEventListener('submit', function (e) {
       e.preventDefault();
       var v = extract(input.value), bad = check(v);
-      if (bad) { show(bad, 'err'); input.focus(); return; }
+      if (bad) { res.innerHTML = ''; show(bad, 'err'); input.focus(); return; }
       input.value = v;
-      var copying = copy(v); // داخل نفس الضغطة كي يسمح بها المتصفح
-      var w = window.open(APPLE_URL, '_blank', 'noopener,noreferrer');
-      copying.then(function (ok) {
-        show(ok ? 'تم نسخ الرقم. الصقه في خانة الرقم التسلسلي بصفحة Apple.' : 'انسخ الرقم يدوياً ثم الصقه في صفحة Apple.', 'ok');
+      show('');
+      res.innerHTML = resultHtml(v);
+      var go = res.querySelector('[data-apple]');
+      go.addEventListener('click', function () {
+        var copying = copy(v); // داخل نفس الضغطة كي يسمح بها المتصفح
+        var w = window.open(APPLE_URL, '_blank', 'noopener,noreferrer');
+        copying.then(function (ok) {
+          show(ok ? 'تم نسخ الرقم. الصقه في خانة الرقم التسلسلي بصفحة Apple.' : 'انسخ الرقم يدوياً ثم الصقه في صفحة Apple.', 'ok');
+        });
+        if (!w) window.location.href = APPLE_URL;
       });
-      if (!w) window.location.href = APPLE_URL;
     });
 
-    input.addEventListener('input', function () { show(''); });
+    input.addEventListener('input', reset);
     input.addEventListener('paste', function () {
       setTimeout(function () { var v = extract(input.value); if (v) input.value = v; }, 0);
     });
     root.querySelector('[data-clear]').addEventListener('click', function () {
-      input.value = ''; show(''); input.focus();
+      input.value = ''; reset(); input.focus();
     });
   }
 
